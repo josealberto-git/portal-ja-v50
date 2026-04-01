@@ -1,264 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Sistema Completo</title>
+<style>
+body {
+  font-family: Arial;
+  color:#fff;
+  background: url('20241231_234354.jpg') no-repeat center center fixed;
+  background-size: cover;
+}
+.container {width:320px; margin:80px auto; background:rgba(0,0,0,0.7); padding:20px; border-radius:10px;}
+input, button, select {width:100%; padding:10px; margin:5px 0;}
+button {cursor:pointer;}
+.top-buttons {position:fixed; top:10px; right:10px;}
+#painel, #clienteArea {display:none;}
+</style>
+</head>
+<body>
+
+<div class="top-buttons">
+<button onclick="mostrarCliente()">Área do Cliente</button>
+<button onclick="mostrarPainel()">Painel Admin</button>
+</div>
+
+<div class="container" id="login">
+<h2>Login</h2>
+<input id="user" placeholder="Usuário">
+<input id="pass" type="password" placeholder="Senha">
+<button onclick="fazerLogin()">Entrar</button>
+<button onclick="esqueciSenha()">Esqueci senha</button>
+<button onclick="suporte()">Suporte</button>
+</div>
+
+<div class="container" id="painel">
+<h2>Painel</h2>
+<p id="permissoes"></p>
+
+<h3>Usuários</h3>
+<ul id="lista"></ul>
+
+<h3>Criar usuário (admin+)</h3>
+<input id="novoUser" placeholder="Usuário">
+<input id="novaSenha" placeholder="Senha">
+<select id="tipoUser">
+<option value="cliente">Cliente</option>
+<option value="editor">Editor</option>
+</select>
+<button onclick="criarUser()">Criar</button>
+
+<h3>Pedidos de reset</h3>
+<ul id="pedidos"></ul>
+
+<h3>Mensagens suporte</h3>
+<ul id="msgs"></ul>
+
+<button onclick="logout()">Sair</button>
+</div>
+
+<div class="container" id="clienteArea">
+<h2>Área do Cliente</h2>
+<p>IP: <span id="ip"></span></p>
+<p>Jogo: Minecraft ativo</p>
+<button onclick="trocarSenha()">Trocar senha</button>
+<button onclick="logout()">Sair</button>
+</div>
+
 <script>
+// ELEMENTOS
+const elLogin = document.getElementById('login');
+const elPainel = document.getElementById('painel');
+const elCliente = document.getElementById('clienteArea');
+const elUser = document.getElementById('user');
+const elPass = document.getElementById('pass');
+const elLista = document.getElementById('lista');
+const elPerm = document.getElementById('permissoes');
+const elNovoUser = document.getElementById('novoUser');
+const elNovaSenha = document.getElementById('novaSenha');
+const elTipoUser = document.getElementById('tipoUser');
+const elIP = document.getElementById('ip');
+const elPedidos = document.getElementById('pedidos');
+const elMsgs = document.getElementById('msgs');
 
-/* ================= SISTEMA ================= */
+// BANCO LOCAL (simulação)
+let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [
+{user:'master', pass:'123', tipo:'master'},
+{user:'admin', pass:'123', tipo:'admin'},
+{user:'editor', pass:'123', tipo:'editor'},
+{user:'cliente', pass:'123', tipo:'cliente'}
+];
 
-let usuarios = JSON.parse(localStorage.getItem("usuarios")) || []
+let pedidosReset = JSON.parse(localStorage.getItem('pedidos')) || [];
+let mensagens = JSON.parse(localStorage.getItem('msgs')) || [];
+let logado = null;
 
-let usuarioLogado = JSON.parse(sessionStorage.getItem("logado")) || null
-
-/* CRIA MASTER SE NÃO EXISTIR */
-if(!usuarios.find(u=>u.user==="master")){
-usuarios.push({
-user:"master",
-senha:hash("123"),
-tipo:"master"
-})
-salvar()
-}
-
-/* HASH SIMPLES */
-function hash(s){
-return btoa(s + "segredo123")
-}
-
-/* SALVAR */
 function salvar(){
-localStorage.setItem("usuarios",JSON.stringify(usuarios))
+localStorage.setItem('usuarios', JSON.stringify(usuarios));
+localStorage.setItem('pedidos', JSON.stringify(pedidosReset));
+localStorage.setItem('msgs', JSON.stringify(mensagens));
 }
 
-/* LOGIN */
-function login(){
-
-let u = user.value.trim()
-let s = senha.value.trim()
-
-let encontrado = usuarios.find(x=>x.user===u && x.senha===hash(s))
-
-if(!encontrado){
-status.innerText="Login inválido"
-return
+function fazerLogin(){
+let u = elUser.value;
+let p = elPass.value;
+let achou = usuarios.find(x=>x.user===u && x.pass===p);
+if(achou){logado=achou; alert('Logado');}
+else alert('Erro');
 }
 
-usuarioLogado = encontrado
+function mostrarPainel(){
+if(!logado) return alert('Login primeiro');
+if(logado.tipo==='cliente') return alert('Sem acesso');
 
-sessionStorage.setItem("logado",JSON.stringify(encontrado))
-
-document.getElementById("userLogado").innerText =
-"👤 "+encontrado.user+" ("+encontrado.tipo+")"
-
-if(encontrado.tipo!=="cliente"){
-menuAdmin.style.display="block"
+elLogin.style.display='none';
+elPainel.style.display='block';
+elPerm.innerText='Permissão: '+logado.tipo;
+listar();
+mostrarExtras();
 }
 
-status.innerText="Bem-vindo"
-
-mostrar("cliente")
-atualizar()
-
+function listar(){
+elLista.innerHTML='';
+usuarios.forEach((u,i)=>{
+let li=document.createElement('li');
+li.innerHTML=`${u.user} (${u.tipo}) - senha: ${logado.tipo==='master'?u.pass:'***'}
+<button onclick="reset(${i})">Reset</button>
+${logado.tipo==='master'?`<button onclick="deletar(${i})">Del</button>`:''}`;
+elLista.appendChild(li);
+});
 }
 
-/* AUTO LOGIN */
-if(usuarioLogado){
-document.getElementById("userLogado").innerText =
-"👤 "+usuarioLogado.user+" ("+usuarioLogado.tipo+")"
+function mostrarExtras(){
+elPedidos.innerHTML='';
+pedidosReset.forEach(p=>{
+let li=document.createElement('li'); li.innerText=p;
+elPedidos.appendChild(li);
+});
 
-if(usuarioLogado.tipo!=="cliente"){
-menuAdmin.style.display="block"
-}
-}
-
-/* ESQUECI SENHA (SIMULADO) */
-function solicitarSenha(){
-
-let u = document.getElementById("userReset").value.trim()
-
-if(!u){
-alert("Digite seu usuário")
-return
+elMsgs.innerHTML='';
+mensagens.forEach(m=>{
+let li=document.createElement('li'); li.innerText=m;
+elMsgs.appendChild(li);
+});
 }
 
-let userObj = usuarios.find(x=>x.user===u)
+function reset(i){
+let alvo=usuarios[i];
+if(logado.tipo==='editor' && (alvo.tipo==='admin'||alvo.tipo==='master')) return alert('Sem permissão');
+if(logado.tipo==='admin' && alvo.tipo==='master') return alert('Sem permissão');
 
-if(!userObj){
-alert("Usuário não encontrado")
-return
+alvo.pass='123';
+salvar();
+alert('Senha resetada');
+listar();
 }
 
-/* GERA TOKEN */
-let token = Math.random().toString(36).substring(2)
-
-userObj.resetToken = token
-userObj.expira = Date.now() + (1000 * 60 * 10)
-
-salvar()
-
-alert("Token gerado (simulação): " + token)
-
-/* EM SISTEMA REAL IA POR EMAIL */
-
+function deletar(i){
+if(logado.tipo!=='master') return alert('Só master');
+usuarios.splice(i,1);
+salvar();
+listar();
 }
 
-/* RESET COM TOKEN */
-function redefinirSenha(){
-
-let u = prompt("Usuário:")
-let token = prompt("Token:")
-let nova = prompt("Nova senha:")
-
-let userObj = usuarios.find(x=>x.user===u)
-
-if(!userObj){
-alert("Usuário não existe")
-return
+function criarUser(){
+if(!(logado.tipo==='admin'||logado.tipo==='master')) return alert('Sem permissão');
+usuarios.push({user:elNovoUser.value, pass:elNovaSenha.value, tipo:elTipoUser.value});
+salvar();
+listar();
 }
 
-if(userObj.resetToken !== token || Date.now() > userObj.expira){
-alert("Token inválido ou expirado")
-return
-}
+function mostrarCliente(){
+if(!logado) return alert('Login');
 
-userObj.senha = hash(nova)
-delete userObj.resetToken
-delete userObj.expira
+elLogin.style.display='none';
+elCliente.style.display='block';
 
-salvar()
-
-alert("Senha redefinida")
-
-}
-
-/* SEGURANÇA DE TELA */
-function mostrar(id){
-
-if(id!=="login" && !usuarioLogado){
-alert("Faça login")
-return
-}
-
-document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"))
-
-document.getElementById(id).classList.add("active")
-
-}
-
-/* ADMIN */
-function criarUsuario(){
-
-if(usuarioLogado.tipo!=="master"){
-alert("Apenas MASTER")
-return
-}
-
-if(!novoUser.value || !novaSenha.value){
-alert("Preencha tudo")
-return
-}
-
-usuarios.push({
-user:novoUser.value.trim(),
-senha:hash(novaSenha.value.trim()),
-tipo:tipoUser.value
-})
-
-salvar()
-atualizar()
-
-}
-
-/* DELETAR */
-function deletarUsuario(){
-
-if(usuarioLogado.tipo!=="master"){
-alert("Apenas MASTER")
-return
-}
-
-usuarios = usuarios.filter(x=>x.user!==delUser.value)
-
-salvar()
-atualizar()
-
-}
-
-/* CATEGORIA */
-function mudarCategoria(){
-
-if(usuarioLogado.tipo!=="master"){
-alert("Apenas MASTER")
-return
-}
-
-let u = usuarios.find(x=>x.user===catUser.value)
-
-if(!u){
-alert("Usuário não encontrado")
-return
-}
-
-u.tipo = novaCat.value
-
-salvar()
-atualizar()
-
-}
-
-/* RESET ADMIN */
-function resetarSenha(){
-
-if(usuarioLogado.tipo==="cliente"){
-alert("Sem permissão")
-return
-}
-
-let alvo = usuarios.find(x=>x.user===resetUser.value)
-
-if(!alvo){
-alert("Usuário não existe")
-return
-}
-
-alvo.senha = hash(novaReset.value)
-
-salvar()
-alert("Senha alterada")
-
-}
-
-/* LISTA */
-function atualizar(){
-
-listaUsers.innerHTML=""
-
-usuarios.forEach(u=>{
-listaUsers.innerHTML += `<li>${u.user} (${u.tipo})</li>`
-})
-
-}
-
-/* RESTO IGUAL */
-function abrir(url){window.open(url)}
-function abrirNav(){iframeNav.src=urlNav.value}
-
-function ip(){
-fetch("https://api.ipify.org?format=json")
+fetch('https://api.ipify.org?format=json')
 .then(r=>r.json())
-.then(d=>ip.innerText=d.ip)
+.then(d=>elIP.innerText=d.ip);
 }
 
-function calc(op){
-let a=parseFloat(n1.value)
-let b=parseFloat(n2.value)
-if(op=="+") res.innerText=a+b
-if(op=="-") res.innerText=a-b
-if(op=="*") res.innerText=a*b
-if(op=="/") res.innerText=a/b
+function trocarSenha(){
+let n=prompt('Nova senha');
+logado.pass=n;
+salvar();
+alert('Alterada');
 }
 
-function yt(){
-let link=linkYT.value.trim()
-if(!link){alert("Cole o link");return}
-let id=link.split("v=")[1]
-ytRes.innerHTML="<a target='_blank' href='https://ytmp3.nu/"+id+"'>Baixar MP3</a>"
+function esqueciSenha(){
+pedidosReset.push(elUser.value);
+salvar();
+alert('Pedido enviado ao master (simulado)');
 }
 
+function suporte(){
+let m=prompt('Mensagem');
+mensagens.push(m);
+salvar();
+alert('Mensagem enviada ao master (simulado)');
+}
+
+function logout(){
+logado=null;
+elLogin.style.display='block';
+elPainel.style.display='none';
+elCliente.style.display='none';
+}
+
+// TESTE AUTOMÁTICO SIMPLES
+console.log('Teste sistema carregado');
 </script>
+
+</body>
+</html>
