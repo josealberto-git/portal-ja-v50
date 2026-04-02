@@ -83,7 +83,23 @@ const elPedidos = document.getElementById('pedidos');
 const elMsgs = document.getElementById('msgs');
 
 // BANCO LOCAL (simulação)
-let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [
+let usuarios;
+try {
+  usuarios = JSON.parse(localStorage.getItem('usuarios')) || [
+    {user:'master', pass:'123', tipo:'master'},
+    {user:'admin', pass:'123', tipo:'admin'},
+    {user:'editor', pass:'123', tipo:'editor'},
+    {user:'cliente', pass:'123', tipo:'cliente'}
+  ];
+} catch(e) {
+  localStorage.removeItem('usuarios');
+  usuarios = [
+    {user:'master', pass:'123', tipo:'master'},
+    {user:'admin', pass:'123', tipo:'admin'},
+    {user:'editor', pass:'123', tipo:'editor'},
+    {user:'cliente', pass:'123', tipo:'cliente'}
+  ];
+}
 {user:'master', pass:'123', tipo:'master'},
 {user:'admin', pass:'123', tipo:'admin'},
 {user:'editor', pass:'123', tipo:'editor'},
