@@ -2,229 +2,169 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Sistema Completo</title>
+<title>Sistema Completo Funcional</title>
 <style>
-body {
-  font-family: Arial;
-  color:#fff;
-  background: url('20241231_234354.jpg') no-repeat center center fixed;
-  background-size: cover;
-}
-.container {width:320px; margin:80px auto; background:rgba(0,0,0,0.7); padding:20px; border-radius:10px;}
-input, button, select {width:100%; padding:10px; margin:5px 0;}
-button {cursor:pointer;}
-.top-buttons {position:fixed; top:10px; right:10px;}
-#painel, #clienteArea {display:none;}
+body{margin:0;background:black;color:#0f0;font-family:Arial;text-align:center;overflow:hidden}
+canvas{position:fixed;top:0;left:0;z-index:-1}
+.box{margin-top:80px}
+input,button,select{padding:10px;margin:5px;background:#111;color:#0f0;border:1px solid #0f0}
+#painel,#cliente{display:none}
 </style>
 </head>
 <body>
 
-<div class="top-buttons">
-<button onclick="mostrarCliente()">Área do Cliente</button>
-<button onclick="mostrarPainel()">Painel Admin</button>
-</div>
+<canvas id="matrix"></canvas>
 
-<div class="container" id="login">
+<div class="box" id="login">
 <h2>Login</h2>
-<input id="user" placeholder="Usuário">
-<input id="pass" type="password" placeholder="Senha">
+<input id="user" placeholder="Usuário"><br>
+<input id="pass" type="password" placeholder="Senha"><br>
 <button onclick="fazerLogin()">Entrar</button>
-<button onclick="esqueciSenha()">Esqueci senha</button>
+<button onclick="esqueci()">Esqueci senha</button>
 <button onclick="suporte()">Suporte</button>
 </div>
 
-<div class="container" id="painel">
-<h2>Painel</h2>
-<p id="permissoes"></p>
-
-<h3>Usuários</h3>
+<div class="box" id="painel">
+<h2>👑 Painel Admin</h2>
+<p id="info"></p>
 <ul id="lista"></ul>
 
-<h3>Criar usuário (admin+)</h3>
+<h3>Criar usuário</h3>
 <input id="novoUser" placeholder="Usuário">
 <input id="novaSenha" placeholder="Senha">
-<select id="tipoUser">
+<select id="tipo">
 <option value="cliente">Cliente</option>
 <option value="editor">Editor</option>
+<option value="admin">Admin</option>
 </select>
-<button onclick="criarUser()">Criar</button>
+<button onclick="criar()">Criar</button>
 
-<h3>Pedidos de reset</h3>
+<h3>Pedidos de senha</h3>
 <ul id="pedidos"></ul>
 
-<h3>Mensagens suporte</h3>
+<h3>Mensagens</h3>
 <ul id="msgs"></ul>
 
 <button onclick="logout()">Sair</button>
 </div>
 
-<div class="container" id="clienteArea">
+<div class="box" id="cliente">
 <h2>Área do Cliente</h2>
 <p>IP: <span id="ip"></span></p>
-<p>Jogo: Minecraft ativo</p>
 <button onclick="trocarSenha()">Trocar senha</button>
 <button onclick="logout()">Sair</button>
 </div>
 
 <script>
-// ELEMENTOS
-const elLogin = document.getElementById('login');
-const elPainel = document.getElementById('painel');
-const elCliente = document.getElementById('clienteArea');
-const elUser = document.getElementById('user');
-const elPass = document.getElementById('pass');
-const elLista = document.getElementById('lista');
-const elPerm = document.getElementById('permissoes');
-const elNovoUser = document.getElementById('novoUser');
-const elNovaSenha = document.getElementById('novaSenha');
-const elTipoUser = document.getElementById('tipoUser');
-const elIP = document.getElementById('ip');
-const elPedidos = document.getElementById('pedidos');
-const elMsgs = document.getElementById('msgs');
+// MATRIX
+const c=document.getElementById('matrix');
+const ctx=c.getContext('2d');
+c.height=innerHeight;c.width=innerWidth;
+let letters="01".split("");
+let drops=[];for(let x=0;x<c.width/14;x++)drops[x]=1;
+setInterval(()=>{
+ctx.fillStyle="rgba(0,0,0,0.05)";
+ctx.fillRect(0,0,c.width,c.height);
+ctx.fillStyle="#0f0";ctx.font="14px monospace";
+drops.forEach((d,i)=>{
+let t=letters[Math.random()*letters.length|0];
+ctx.fillText(t,i*14,d*14);
+if(d*14>c.height&&Math.random()>0.975)drops[i]=0;
+drops[i]++;
+});
+},33);
 
-// BANCO LOCAL (simulação)
-let usuarios;
-try {
-  usuarios = JSON.parse(localStorage.getItem('usuarios')) || [
-    {user:'master', pass:'123', tipo:'master'},
-    {user:'admin', pass:'123', tipo:'admin'},
-    {user:'editor', pass:'123', tipo:'editor'},
-    {user:'cliente', pass:'123', tipo:'cliente'}
-  ];
-} catch(e) {
-  localStorage.removeItem('usuarios');
-  usuarios = [
-    {user:'master', pass:'123', tipo:'master'},
-    {user:'admin', pass:'123', tipo:'admin'},
-    {user:'editor', pass:'123', tipo:'editor'},
-    {user:'cliente', pass:'123', tipo:'cliente'}
-  ];
-}
-{user:'master', pass:'123', tipo:'master'},
-{user:'admin', pass:'123', tipo:'admin'},
-{user:'editor', pass:'123', tipo:'editor'},
-{user:'cliente', pass:'123', tipo:'cliente'}
+// SISTEMA
+let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [
+{user:'josé',pass:'1925',tipo:'master'}
 ];
-
-let pedidosReset = JSON.parse(localStorage.getItem('pedidos')) || [];
-let mensagens = JSON.parse(localStorage.getItem('msgs')) || [];
-let logado = null;
+let pedidos = JSON.parse(localStorage.getItem('pedidos')) || [];
+let msgs = JSON.parse(localStorage.getItem('msgs')) || [];
+let logado=null;
 
 function salvar(){
-localStorage.setItem('usuarios', JSON.stringify(usuarios));
-localStorage.setItem('pedidos', JSON.stringify(pedidosReset));
-localStorage.setItem('msgs', JSON.stringify(mensagens));
+localStorage.setItem('usuarios',JSON.stringify(usuarios));
+localStorage.setItem('pedidos',JSON.stringify(pedidos));
+localStorage.setItem('msgs',JSON.stringify(msgs));
 }
 
 function fazerLogin(){
-let u = elUser.value;
-let p = elPass.value;
-let achou = usuarios.find(x=>x.user===u && x.pass===p);
-if(achou){logado=achou; alert('Logado');}
-else alert('Erro');
+let u=user.value.trim();
+let p=pass.value.trim();
+let ok=usuarios.find(x=>x.user===u&&x.pass===p);
+
+if(ok){
+logado=ok;
+if(ok.tipo==='cliente') abrirCliente(); else abrirPainel();
+}else alert('Login errado');
 }
 
-function mostrarPainel(){
-if(!logado) return alert('Login primeiro');
-if(logado.tipo==='cliente') return alert('Sem acesso');
-
-elLogin.style.display='none';
-elPainel.style.display='block';
-elPerm.innerText='Permissão: '+logado.tipo;
+function abrirPainel(){
+login.style.display='none';
+painel.style.display='block';
+info.innerText='Logado: '+logado.user+' ('+logado.tipo+')';
 listar();
 mostrarExtras();
 }
 
-function listar(){
-elLista.innerHTML='';
-usuarios.forEach((u,i)=>{
-let li=document.createElement('li');
-li.innerHTML=`${u.user} (${u.tipo}) - senha: ${logado.tipo==='master'?u.pass:'***'}
-<button onclick="reset(${i})">Reset</button>
-${logado.tipo==='master'?`<button onclick="deletar(${i})">Del</button>`:''}`;
-elLista.appendChild(li);
-});
+function abrirCliente(){
+login.style.display='none';
+cliente.style.display='block';
+fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>ip.innerText=d.ip);
 }
 
-function mostrarExtras(){
-elPedidos.innerHTML='';
-pedidosReset.forEach(p=>{
-let li=document.createElement('li'); li.innerText=p;
-elPedidos.appendChild(li);
-});
-
-elMsgs.innerHTML='';
-mensagens.forEach(m=>{
-let li=document.createElement('li'); li.innerText=m;
-elMsgs.appendChild(li);
+function listar(){
+lista.innerHTML='';
+usuarios.forEach((u,i)=>{
+let li=document.createElement('li');
+li.innerHTML=`${u.user} (${u.tipo})
+<button onclick="reset(${i})">Reset</button>
+${logado.tipo==='master'?`<button onclick="del(${i})">Del</button>`:''}`;
+lista.appendChild(li);
 });
 }
 
 function reset(i){
-let alvo=usuarios[i];
-if(logado.tipo==='editor' && (alvo.tipo==='admin'||alvo.tipo==='master')) return alert('Sem permissão');
-if(logado.tipo==='admin' && alvo.tipo==='master') return alert('Sem permissão');
-
-alvo.pass='123';
-salvar();
-alert('Senha resetada');
-listar();
+if(logado.tipo==='editor'&&(usuarios[i].tipo==='admin'||usuarios[i].tipo==='master'))return alert('Sem permissão');
+if(logado.tipo==='admin'&&usuarios[i].tipo==='master')return alert('Sem permissão');
+usuarios[i].pass='123';salvar();listar();
 }
 
-function deletar(i){
-if(logado.tipo!=='master') return alert('Só master');
-usuarios.splice(i,1);
-salvar();
-listar();
+function del(i){
+if(logado.tipo!=='master')return alert('Só master');
+usuarios.splice(i,1);salvar();listar();
 }
 
-function criarUser(){
-if(!(logado.tipo==='admin'||logado.tipo==='master')) return alert('Sem permissão');
-usuarios.push({user:elNovoUser.value, pass:elNovaSenha.value, tipo:elTipoUser.value});
-salvar();
-listar();
+function criar(){
+if(!(logado.tipo==='admin'||logado.tipo==='master'))return alert('Sem permissão');
+usuarios.push({user:novoUser.value,pass:novaSenha.value,tipo:tipo.value});
+salvar();listar();
 }
 
-function mostrarCliente(){
-if(!logado) return alert('Login');
-
-elLogin.style.display='none';
-elCliente.style.display='block';
-
-fetch('https://api.ipify.org?format=json')
-.then(r=>r.json())
-.then(d=>elIP.innerText=d.ip);
+function mostrarExtras(){
+pedidos.innerHTML=pedidos.map(p=>'<li>'+p+'</li>').join('');
+msgs.innerHTML=msgs.map(m=>'<li>'+m+'</li>').join('');
 }
 
 function trocarSenha(){
 let n=prompt('Nova senha');
-logado.pass=n;
-salvar();
-alert('Alterada');
+logado.pass=n;salvar();
 }
 
-function esqueciSenha(){
-pedidosReset.push(elUser.value);
-salvar();
-alert('Pedido enviado ao master (simulado)');
+function esqueci(){
+pedidos.push(user.value||'desconhecido');salvar();alert('Pedido enviado');
 }
 
 function suporte(){
-let m=prompt('Mensagem');
-mensagens.push(m);
-salvar();
-alert('Mensagem enviada ao master (simulado)');
+let m=prompt('Mensagem');if(m){msgs.push(m);salvar();alert('Enviado');}
 }
 
 function logout(){
 logado=null;
-elLogin.style.display='block';
-elPainel.style.display='none';
-elCliente.style.display='none';
+login.style.display='block';
+painel.style.display='none';
+cliente.style.display='none';
 }
-
-// TESTE AUTOMÁTICO SIMPLES
-console.log('Teste sistema carregado');
 </script>
 
 </body>
