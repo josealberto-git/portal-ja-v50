@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Sistema Completo Funcional</title>
+<title>Sistema do josé 😎😎</title>
 <style>
 body{margin:0;background:black;color:#0f0;font-family:Arial;text-align:center;overflow:hidden}
 canvas{position:fixed;top:0;left:0;z-index:-1}
@@ -75,9 +75,13 @@ drops[i]++;
 },33);
 
 // SISTEMA
-let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [
-{user:'josé',pass:'1925',tipo:'master'}
-];
+let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
+
+// GARANTE MASTER SEMPRE
+if(!usuarios.find(u => u.user.toLowerCase() === 'jose')){
+  usuarios.push({user:'jose',pass:'1925',tipo:'master'});
+  localStorage.setItem('usuarios', JSON.stringify(usuarios));
+}
 let pedidos = JSON.parse(localStorage.getItem('pedidos')) || [];
 let msgs = JSON.parse(localStorage.getItem('msgs')) || [];
 let logado=null;
@@ -89,13 +93,15 @@ localStorage.setItem('msgs',JSON.stringify(msgs));
 }
 
 function fazerLogin(){
-let u=user.value.trim();
-let p=pass.value.trim();
-let ok=usuarios.find(x=>x.user===u&&x.pass===p);
+let u = user.value.trim().toLowerCase();
+let p = pass.value.trim();
+
+let ok = usuarios.find(x => x.user.toLowerCase() === u && x.pass === p);
 
 if(ok){
-logado=ok;
+logado = ok;
 if(ok.tipo==='cliente') abrirCliente(); else abrirPainel();
+}else alert('Login errado');
 }else alert('Login errado');
 }
 
